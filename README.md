@@ -7,39 +7,36 @@
 ## 技术栈
 
 - **前端** `frontend/`：Vite + React 19 + TypeScript + Ant Design 5 + ECharts
-- **后端** `backend/`：Node + Express，调用 DeepSeek-V4-Flash（OpenAI 兼容接口）
+- **后端**：Netlify Function `frontend/netlify/functions/analyze.mjs`（serverless），
+  调用 DeepSeek-V4-Flash（OpenAI 兼容接口）。密钥仅存于服务端环境变量，不进前端打包。
+
+前端 `/api/analyze` 经 `netlify.toml` 重定向到该 Function；本地与线上行为一致。
 
 ## 本地运行
 
-需要同时启动后端与前端（两个终端）。
-
-### 1. 后端
-
 ```bash
-cd backend
-npm install
-cp .env.example .env      # 然后在 .env 中填入你的 DeepSeek API Key
-npm start                 # 启动于 http://localhost:8787
-```
-
-### 2. 前端
-
-```bash
+npm i -g netlify-cli            # 首次需安装 Netlify CLI
 cd frontend
 npm install
-npm run dev               # 启动于 http://localhost:5173
+cp .env.example .env           # 在 .env 中填入你的 DeepSeek API Key
+netlify dev                    # 一条命令同时跑前端 + Function，默认 http://localhost:8888
 ```
 
-浏览器打开 http://localhost:5173 即可使用。前端 `/api` 请求经 Vite 代理转发到后端，
-密钥仅保存在后端 `.env`，不会进入前端代码。
+浏览器打开 `netlify dev` 提示的地址即可使用。密钥只在本地 `.env`（已忽略）/ 线上环境变量中，
+绝不会进入前端代码。
 
-## 部署
+## 部署到 Netlify
 
-- 前端可部署到 Netlify（base 目录 `frontend`，构建命令 `npm run build`，发布目录 `frontend/dist`）。
-- 后端需单独部署（如 Render / Railway / 云服务器），并在其环境变量中配置 `DEEPSEEK_API_KEY`；
-  前端通过环境变量或代理指向后端地址。
+1. Netlify → **Add new site → Import an existing project**，连接 GitHub 选本仓库。
+2. 构建设置：**Base directory = `frontend`**（Build command `npm run build`、Publish `dist`
+   会由 `frontend/netlify.toml` 提供）。
+3. **Site configuration → Environment variables** 添加：
+   - `DEEPSEEK_API_KEY = <你的密钥>`（可选 `DEEPSEEK_MODEL = deepseek-v4-flash`）。
+4. Deploy。完成后访问分配的网址即可，`/api/analyze` 自动走 serverless Function。
+
+> 说明：Netlify 同步 Function 默认约 10 秒超时，DeepSeek 调用通常约 6 秒；超长文本可能逼近上限。
 
 ## 安全
 
-- **切勿提交 `backend/.env` 或任何包含 API Key 的文件**（已在 `.gitignore` 中忽略）。
-- 若密钥曾经泄露，请到 DeepSeek 控制台轮换。
+- **切勿提交 `.env` 或任何含 API Key 的文件**（已在 `.gitignore` 忽略；仅提交 `.env.example` 模板）。
+- 密钥泄露请到 DeepSeek 控制台轮换。

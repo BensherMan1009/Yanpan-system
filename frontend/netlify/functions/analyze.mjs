@@ -1,15 +1,10 @@
-import express from 'express'
-import cors from 'cors'
-import 'dotenv/config'
+// ============================================================================
+//  Netlify Function：/api/analyze → 调用 DeepSeek-V4-Flash 进行实质性相似研判
+//  逻辑由原 backend/server.js 移植；密钥来自 Netlify 环境变量，绝不进前端。
+// ============================================================================
 
-const app = express()
-app.use(cors())
-app.use(express.json({ limit: '4mb' }))
-
-const API_KEY = process.env.DEEPSEEK_API_KEY
 const BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'
 const MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash'
-const PORT = process.env.PORT || 8787
 
 const typeLabel = { text: '文字作品', art: '美术作品', av: '视听作品' }
 const CONCLUSIONS = ['构成实质性相似', '部分相似', '不构成实质性相似']
@@ -114,17 +109,36 @@ function normalize(p, { workType, plaintiff, defendant }) {
   }
 }
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, model: MODEL, hasKey: Boolean(API_KEY) })
+const json = (statusCode, payload) => ({
+  statusCode,
+  headers: { 'Content-Type': 'application/json; charset=utf-8' },
+  body: JSON.stringify(payload),
 })
 
-app.post('/api/analyze', async (req, res) => {
-  try {
-    if (!API_KEY) {
-      return res.status(500).send('后端未配置 DEEPSEEK_API_KEY，请检查 backend/.env')
-    }
-    const { workType = 'text', plaintiff = {}, defendant = {} } = req.body || {}
+const text = (statusCode, body) => ({
+  statusCode,
+  headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  body,
+})
 
+export const handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return text(405, 'Method Not Allowed')
+  }
+  const API_KEY = process.env.DEEPSEEK_API_KEY
+  if (!API_KEY) {
+    return text(500, '服务未配置 DEEPSEEK_API_KEY，请在 Netlify 环境变量中设置')
+  }
+
+  let body
+  try {
+    body = JSON.parse(event.body || '{}')
+  } catch {
+    return text(400, '请求体不是合法 JSON')
+  }
+  const { workType = 'text', plaintiff = {}, defendant = {} } = body
+
+  try {
     const resp = await fetch(`${BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -145,11 +159,9 @@ app.post('/api/analyze', async (req, res) => {
     })
 
     if (!resp.ok) {
-      const text = await resp.text().catch(() => '')
-      console.error('DeepSeek error', resp.status, text.slice(0, 500))
-      return res
-        .status(502)
-        .send(`DeepSeek 接口错误（${resp.status}）：${text.slice(0, 300)}`)
+      const errText = await resp.text().catch(() => '')
+      console.error('DeepSeek error', resp.status, errText.slice(0, 500))
+      return text(502, `DeepSeek 接口错误（${resp.status}）：${errText.slice(0, 300)}`)
     }
 
     const data = await resp.json()
@@ -159,16 +171,12 @@ app.post('/api/analyze', async (req, res) => {
       parsed = JSON.parse(content)
     } catch {
       console.error('Bad JSON from model:', content.slice(0, 500))
-      return res.status(502).send('模型未返回有效 JSON，请重试')
+      return text(502, '模型未返回有效 JSON，请重试')
     }
 
-    res.json(normalize(parsed, { workType, plaintiff, defendant }))
+    return json(200, normalize(parsed, { workType, plaintiff, defendant }))
   } catch (e) {
     console.error(e)
-    res.status(500).send('研判服务异常：' + (e?.message || String(e)))
+    return text(500, '研判服务异常：' + (e?.message || String(e)))
   }
-})
-
-app.listen(PORT, () => {
-  console.log(`[研判后端] 已启动 http://localhost:${PORT}  模型=${MODEL}  密钥=${API_KEY ? '已配置' : '未配置'}`)
-})
+}

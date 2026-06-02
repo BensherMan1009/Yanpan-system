@@ -1,0 +1,20 @@
+# Netlify 配置（站点 Base directory 设为 frontend，以下路径相对 frontend）
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# 前端的 /api/analyze 转发到 serverless function
+[[redirects]]
+  from = "/api/analyze"
+  to = "/.netlify/functions/analyze"
+  status = 200
+
+# SPA 兜底：其余路由交给前端 React Router
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
