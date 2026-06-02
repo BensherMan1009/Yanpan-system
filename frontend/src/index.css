@@ -1,0 +1,450 @@
+/* ============================================================================
+   研判档案 — Forensic Judicial Dossier 设计系统
+   暖色象牙纸面 · 墨黑文字 · 朱砂印章红 · 衬线标题 + 等宽数据
+   ============================================================================ */
+
+:root {
+  /* 纸面 / paper */
+  --paper: #ece6d8;
+  --paper-2: #f5f1e7;
+  --paper-3: #faf7ef;
+
+  /* 墨色 / ink */
+  --ink: #1c1a16;
+  --ink-soft: #4a463d;
+  --muted: #8c8577;
+
+  /* 线 / hairline */
+  --line: #d3ccba;
+  --line-strong: #b9b0997e;
+
+  /* 朱砂 / seal vermilion */
+  --seal: #b23a2b;
+  --seal-deep: #8d2c20;
+  --seal-wash: rgba(178, 58, 43, 0.08);
+
+  /* 辅助墨蓝 / slate */
+  --slate: #34525c;
+
+  --serif: 'Noto Serif SC', serif;
+  --sans: 'Noto Sans SC', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--sans);
+  font-weight: 400;
+  color: var(--ink);
+  background-color: var(--paper);
+  /* 纸张纹理：极淡噪点 + 微妙暖色渐变 */
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(178, 58, 43, 0.04), transparent 40%),
+    radial-gradient(circle at 88% 0%, rgba(52, 82, 92, 0.05), transparent 45%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: var(--serif);
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* ---- 通用排版工具类 ---- */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--seal);
+}
+
+.label-mono {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.page-wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 56px 32px 96px;
+}
+
+/* ---- 纸卡 ---- */
+.paper-card {
+  background: var(--paper-3);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  position: relative;
+}
+
+.hairline {
+  height: 1px;
+  background: var(--line);
+  border: none;
+  margin: 0;
+}
+
+/* ---- 印章（统一组件 Seal 使用） ---- */
+.seal-mark {
+  font-family: var(--serif);
+  border-style: solid;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex: none;
+  vertical-align: middle;
+}
+
+/* ---- 印章（旧版，报告页评分章沿用） ---- */
+.seal {
+  font-family: var(--serif);
+  color: var(--seal);
+  border: 2.5px solid var(--seal);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  transform: rotate(-6deg);
+  background: var(--seal-wash);
+}
+
+/* 卡片悬停 */
+.hover-card {
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.hover-card:hover {
+  background: var(--paper-2) !important;
+}
+
+/* 进度条（自定义，替代默认组件观感） */
+.bar-track {
+  height: 6px;
+  background: var(--line);
+  border-radius: 0;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--seal);
+  transition: width 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- 入场动画 ---- */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  opacity: 0;
+  animation: riseIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes sealStamp {
+  0% {
+    opacity: 0;
+    transform: rotate(-6deg) scale(1.6);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(-6deg) scale(0.94);
+  }
+  100% {
+    transform: rotate(-6deg) scale(1);
+  }
+}
+.stamp {
+  animation: sealStamp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
+}
+
+/* ============================================================================
+   Ant Design 组件风格覆盖 —— 让默认组件融入纸面档案美学
+   ============================================================================ */
+
+/* 表格 */
+.ant-table {
+  font-family: var(--sans) !important;
+  background: transparent !important;
+}
+.ant-table-thead > tr > th {
+  background: var(--paper) !important;
+  border-bottom: 1.5px solid var(--ink) !important;
+  font-family: var(--mono) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  color: var(--ink-soft) !important;
+}
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--line) !important;
+}
+.ant-table-tbody > tr:hover > td {
+  background: var(--seal-wash) !important;
+}
+
+/* 选择器 / 分段控制器 */
+.ant-select-selector,
+.ant-input,
+.ant-input-affix-wrapper {
+  border-radius: 2px !important;
+  font-family: var(--sans) !important;
+}
+.ant-segmented {
+  border-radius: 2px !important;
+  background: var(--paper) !important;
+  padding: 3px !important;
+  border: 1px solid var(--line);
+}
+.ant-segmented-item-selected {
+  border-radius: 1px !important;
+  background: var(--ink) !important;
+  color: var(--paper-3) !important;
+}
+.ant-segmented-item {
+  font-family: var(--mono) !important;
+  letter-spacing: 0.05em;
+}
+
+/* 上传拖拽区 —— 固定高度，避免被撑高 */
+.ant-upload-wrapper .ant-upload-drag {
+  height: 150px !important;
+  border: 1.5px dashed var(--line-strong) !important;
+  border-radius: 2px !important;
+  background: var(--paper) !important;
+}
+.ant-upload-wrapper .ant-upload-drag .ant-upload-btn {
+  padding: 0 !important;
+}
+.ant-upload-wrapper .ant-upload-drag:hover {
+  border-color: var(--seal) !important;
+}
+
+/* 提示框 */
+.ant-alert {
+  border-radius: 2px !important;
+  font-family: var(--sans) !important;
+}
+
+/* 步骤条文字 */
+.ant-steps {
+  font-family: var(--sans) !important;
+}
+
+/* ============================================================================
+   图片素材 —— 墨黑 + 朱砂双色调处理，融入纸面美学
+   ============================================================================ */
+.duotone {
+  position: relative;
+  overflow: hidden;
+  background: var(--ink);
+  border-radius: 2px;
+}
+.duotone > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(1) contrast(1.06) brightness(1.02);
+  mix-blend-mode: luminosity;
+  opacity: 0.92;
+}
+/* 朱砂—墨双色调叠加 */
+.duotone::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(178, 58, 43, 0.78) 0%,
+    rgba(60, 30, 26, 0.86) 55%,
+    rgba(28, 26, 22, 0.94) 100%
+  );
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+/* 纸色羽化遮罩：用于图上叠字，保证可读性 */
+.duotone-fade::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    var(--paper) 0%,
+    rgba(236, 230, 216, 0.55) 32%,
+    rgba(236, 230, 216, 0) 70%
+  );
+  pointer-events: none;
+}
+
+/* 报告页配图：窄屏隐藏，避免挤压正文 */
+@media (max-width: 640px) {
+  .report-aside {
+    display: none;
+  }
+  .report-aside + div {
+    grid-column: 1 / -1;
+  }
+}
+
+/* 全站极淡水墨背景层（固定，存在感极低） */
+.bg-wash {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-position: center;
+  background-size: cover;
+  filter: grayscale(1) contrast(1.1);
+  opacity: 0.05;
+  mix-blend-mode: multiply;
+}
+
+/* ============================================================================
+   三类作品卡片配图
+   ============================================================================ */
+.work-card {
+  display: flex;
+  flex-direction: column;
+}
+.work-card-img {
+  border-bottom: 1px solid var(--line);
+}
+.work-card-img img {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.work-card:hover .work-card-img img {
+  transform: scale(1.06);
+}
+
+/* ============================================================================
+   交互打磨：按钮按压 / 卡片悬停抬升
+   ============================================================================ */
+.btn-press {
+  transition: transform 0.12s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-press:hover {
+  opacity: 0.92;
+  box-shadow: 0 6px 18px rgba(28, 26, 22, 0.16);
+}
+.btn-press:active {
+  transform: translateY(1px);
+}
+.hover-card:hover {
+  transform: translateY(-2px);
+}
+
+/* ============================================================================
+   响应式适配
+   ============================================================================ */
+@media (max-width: 900px) {
+  .page-wrap {
+    padding: 36px 20px 72px;
+  }
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .hero-aside {
+    width: 100% !important;
+    max-width: 360px;
+  }
+  .case-header {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .header-inner {
+    flex-wrap: wrap;
+    height: auto !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    gap: 12px !important;
+  }
+  .header-nav {
+    width: 100%;
+    overflow-x: auto;
+    gap: 2px !important;
+  }
+  .header-brand-sub {
+    display: none;
+  }
+  .report-toolbar {
+    flex-wrap: wrap;
+  }
+}
+
+/* ============================================================================
+   打印 / 导出（报告页）
+   ============================================================================ */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .bg-wash {
+    display: none !important;
+  }
+  .page-wrap {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+  .paper-card,
+  .duotone {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

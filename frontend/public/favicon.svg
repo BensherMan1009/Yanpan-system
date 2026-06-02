@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect width="48" height="48" rx="6" fill="#ece6d8"/>
+  <g transform="rotate(-6 24 24)">
+    <rect x="8" y="8" width="32" height="32" rx="4" fill="#b23a2b" fill-opacity="0.08" stroke="#b23a2b" stroke-width="3"/>
+    <text x="24" y="25" font-family="'Noto Serif SC','Songti SC','SimSun',serif" font-size="21" font-weight="900" fill="#b23a2b" text-anchor="middle" dominant-baseline="central">研</text>
+  </g>
+</svg>
